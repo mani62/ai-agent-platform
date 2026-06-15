@@ -1,9 +1,8 @@
 from sqlalchemy import String, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column
-
 from app.db.base import Base
 from app.db.mixins import TimestampMixin
-
+import uuid
 
 class User(Base, TimestampMixin):
     __tablename__ = "users"
@@ -11,6 +10,14 @@ class User(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
+        index=True
+    )
+
+    uuid: Mapped[str] = mapped_column(
+        String(36),
+        unique=True,
+        nullable=False,
+        default=lambda: str(uuid.uuid4()),
         index=True
     )
 
