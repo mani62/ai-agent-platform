@@ -1,23 +1,14 @@
 from sqlalchemy import String, Boolean, Integer
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
-from app.db.mixins import TimestampMixin
-import uuid
+from app.db.mixins import TimestampMixin, UUIDMixin
 
-class User(Base, TimestampMixin):
+class User(Base, TimestampMixin, UUIDMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
-        index=True
-    )
-
-    uuid: Mapped[str] = mapped_column(
-        String(36),
-        unique=True,
-        nullable=False,
-        default=lambda: str(uuid.uuid4()),
         index=True
     )
 
@@ -54,4 +45,10 @@ class User(Base, TimestampMixin):
     is_verified: Mapped[bool] = mapped_column(
         Boolean,
         default=False
+    )
+
+    agents = relationship(
+        "Agent",
+        back_populates="owner",
+        cascade="all, delete-orphan"
     )
