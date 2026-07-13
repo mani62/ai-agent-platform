@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
-from app.schemas.agent import AgentCreate, AgentRead
+from app.schemas.agent import AgentCreate, AgentRead, AgentUpdate
 from app.services.agent_service import AgentService
 
 router = APIRouter(
@@ -54,4 +54,21 @@ def get_agents(
         db,
         current_user,
         uuid,
+    )
+
+@router.patch(
+    "/{uuid}",
+    response_model=AgentRead,
+)   
+def update_agent(
+    uuid: str,
+    data: AgentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return agent_service.update_agent(
+        db,
+        current_user,
+        uuid,
+        data,
     )
