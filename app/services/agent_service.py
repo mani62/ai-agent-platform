@@ -91,5 +91,28 @@ class AgentService:
             db,
             agent,
         )
+    
+    def delete_agent(
+        self,
+        db: Session,
+        current_user: User,
+        uuid: str,
+    ) -> None:
+        agent = self.agent_repository.get_by_uuid_and_user(
+            db,
+            uuid,
+            current_user.id,
+        )
+
+        if agent is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Agent not found",
+            )
+
+        self.agent_repository.soft_delete(
+            db,
+            agent,
+        )
 
     

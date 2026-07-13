@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -71,4 +71,19 @@ def update_agent(
         current_user,
         uuid,
         data,
+    )
+
+@router.delete(
+    "/{uuid}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_agent(
+    uuid: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    agent_service.delete_agent(
+        db,
+        current_user,
+        uuid,
     )
