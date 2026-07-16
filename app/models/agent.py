@@ -25,7 +25,7 @@ class Agent(Base, TimestampMixin, UUIDMixin):
 
     description: Mapped[str | None] = mapped_column(
         Text,
-        nullable=False
+        nullable=True
     )
 
     system_prompt: Mapped[str] = mapped_column(

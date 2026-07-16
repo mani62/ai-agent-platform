@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.models.agent import Agent
 from app.models.user import User
 from app.schemas.agent import AgentCreate, AgentRead, AgentUpdate
 from app.services.agent_service import AgentService
@@ -15,7 +16,8 @@ agent_service = AgentService()
 
 @router.post(
     "",
-    response_model=AgentRead        
+    response_model=AgentRead,
+    status_code=status.HTTP_201_CREATED,        
 )
 def create_agent(
     data: AgentCreate,
