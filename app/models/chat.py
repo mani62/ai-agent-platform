@@ -44,3 +44,8 @@ class Chat(Base, UUIDMixin, TimestampMixin):
         "Agent",
         back_populates="chats",
     )
+
+    messages = relationship(
+        "Message",
+        back_populates="chat",
+    )
