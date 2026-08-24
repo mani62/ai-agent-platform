@@ -41,10 +41,15 @@ class Agent(Base, TimestampMixin, UUIDMixin):
 
     is_active: Mapped[bool] = mapped_column(
         Boolean,
-        default=False
+        default=True
     )
 
     owner= relationship(
         "User",
         back_populates="agents",
+    )
+
+    chats = relationship(
+        "Chat",
+        back_populates="agent",
     )

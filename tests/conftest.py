@@ -118,6 +118,26 @@ def test_agent(
     return agent
 
 @pytest.fixture
+def active_agent(
+    db: Session,
+    test_user: User,
+) -> Agent:
+    agent = Agent(
+        user_id=test_user.id,
+        name="Active Test Agent",
+        description="Active agent used for chat testing",
+        system_prompt="You are a test assistant.",
+        model="gpt-4.1-mini",
+        is_active=True,
+    )
+
+    db.add(agent)
+    db.commit()
+    db.refresh(agent)
+
+    return agent
+
+@pytest.fixture
 def second_user(
     db: Session,
 ) -> User:

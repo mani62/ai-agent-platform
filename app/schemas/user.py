@@ -15,6 +15,4 @@ class UserRead(BaseModel):
     is_superuser: bool
     is_verified: bool
 
-    class Config:
-        from_attributes = True
  

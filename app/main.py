@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import auth, users, agents
+from app.api import auth, users, agents, chats
 from app.core.config import settings
 
 app = FastAPI(
@@ -9,6 +9,7 @@ app = FastAPI(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(agents.router)
+app.include_router(chats.router)
 
 @app.get("/")
 def root():

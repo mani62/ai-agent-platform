@@ -32,7 +32,7 @@ def test_create_agent(
     assert data["system_prompt"] == payload["system_prompt"]
     assert data["model"] == payload["model"]
 
-    assert data["is_active"] is False
+    assert data["is_active"] is True
 
     assert "uuid" in data
 

@@ -47,6 +47,12 @@ class User(Base, TimestampMixin, UUIDMixin):
         default=False
     )
 
+    chats = relationship(
+        "Chat",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
     agents = relationship(
         "Agent",
         back_populates="owner",
