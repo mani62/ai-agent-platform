@@ -11,6 +11,7 @@ def test_create_message(
     client: TestClient,
     auth_headers: dict[str, str],
     active_agent: Agent,
+    mock_llm,
 ) -> None:
 
     chat_response = client.post(
@@ -37,8 +38,8 @@ def test_create_message(
 
     data = response.json()
 
-    assert data["content"] == "Explain FastAPI dependencies"
-    assert data["role"] == "user"
+    assert data["role"] == "assistant"
+    assert data["content"] == "This is a mocked AI response."
     assert "uuid" in data
 
 def test_create_message_persists_in_database(
@@ -46,6 +47,7 @@ def test_create_message_persists_in_database(
     auth_headers: dict[str, str],
     active_agent: Agent,
     db: Session,
+    mock_llm,
 ) -> None:
 
     chat_response = client.post(
@@ -68,23 +70,33 @@ def test_create_message_persists_in_database(
 
     assert response.status_code == 201
 
-    message_uuid = response.json()["uuid"]
-
-    message = (
-        db.query(Message)
-        .filter(Message.uuid == message_uuid)
+    chat = (
+        db.query(Chat)
+        .filter(Chat.uuid == chat_uuid)
         .first()
     )
 
-    assert message is not None
-    assert message.content == "Hello Agent"
-    assert message.role == "user"
+    messages = (
+        db.query(Message)
+        .filter(Message.chat_id == chat.id)
+        .order_by(Message.created_at.asc())
+        .all()
+    )
+
+    assert len(messages) == 2
+
+    assert messages[0].role == "user"
+    assert messages[0].content == "Hello Agent"
+
+    assert messages[1].role == "assistant"
+    assert messages[1].content == "This is a mocked AI response."
 
 def test_message_belongs_to_correct_chat(
     client: TestClient,
     auth_headers: dict[str, str],
     active_agent: Agent,
     db: Session,
+    mock_llm,
 ) -> None:
 
     chat_response = client.post(
@@ -124,11 +136,11 @@ def test_message_belongs_to_correct_chat(
     assert message is not None
     assert message.chat_id == chat.id
 
-# Get Messages
-def test_get_chat_messages(
+def test_create_message_saves_user_and_assistant_messages(
     client: TestClient,
     auth_headers: dict[str, str],
     active_agent: Agent,
+    mock_llm,
 ) -> None:
 
     chat_response = client.post(
@@ -141,7 +153,54 @@ def test_get_chat_messages(
 
     chat_uuid = chat_response.json()["uuid"]
 
-    client.post(
+    response = client.post(
+        f"/chats/{chat_uuid}/messages",
+        json={
+            "content": "What is FastAPI?",
+        },
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+
+    messages_response = client.get(
+        f"/chats/{chat_uuid}/messages",
+        headers=auth_headers,
+    )
+
+    assert messages_response.status_code == 200
+
+    messages = messages_response.json()
+
+    assert len(messages) == 2
+
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == "What is FastAPI?"
+
+    assert messages[1]["role"] == "assistant"
+    assert messages[1]["content"] == "This is a mocked AI response."
+
+# Get Messages
+def test_get_chat_messages(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    active_agent: Agent,
+    mock_llm,
+) -> None:
+
+    chat_response = client.post(
+        "/chats",
+        json={
+            "agent_uuid": active_agent.uuid,
+        },
+        headers=auth_headers,
+    )
+
+    assert chat_response.status_code == 201
+
+    chat_uuid = chat_response.json()["uuid"]
+
+    first_response = client.post(
         f"/chats/{chat_uuid}/messages",
         json={
             "content": "First message",
@@ -149,13 +208,17 @@ def test_get_chat_messages(
         headers=auth_headers,
     )
 
-    client.post(
+    assert first_response.status_code == 201
+
+    second_response = client.post(
         f"/chats/{chat_uuid}/messages",
         json={
             "content": "Second message",
         },
         headers=auth_headers,
     )
+
+    assert second_response.status_code == 201
 
     response = client.get(
         f"/chats/{chat_uuid}/messages",
@@ -166,11 +229,22 @@ def test_get_chat_messages(
 
     data = response.json()
 
-    assert len(data) == 2
+    assert len(data) == 4
 
+    assert data[0]["role"] == "user"
     assert data[0]["content"] == "First message"
-    assert data[1]["content"] == "Second message"
-    
+
+    assert data[1]["role"] == "assistant"
+    assert data[1]["content"] == "This is a mocked AI response."
+
+    assert data[2]["role"] == "user"
+    assert data[2]["content"] == "Second message"
+
+    assert data[3]["role"] == "assistant"
+    assert data[3]["content"] == "This is a mocked AI response."
+
+    assert mock_llm.call_count == 2
+        
 def test_get_messages_returns_empty_list(
     client: TestClient,
     auth_headers: dict[str, str],
@@ -375,3 +449,31 @@ def test_get_messages_without_authentication(
     )
 
     assert response.status_code == 401
+
+# Calling LLM
+def test_llm_is_called_when_message_is_created(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    active_agent: Agent,
+    mock_llm,
+) -> None:
+
+    chat_response = client.post(
+        "/chats",
+        json={
+            "agent_uuid": active_agent.uuid,
+        },
+        headers=auth_headers,
+    )
+
+    chat_uuid = chat_response.json()["uuid"]
+
+    client.post(
+        f"/chats/{chat_uuid}/messages",
+        json={
+            "content": "Hello",
+        },
+        headers=auth_headers,
+    )
+
+    mock_llm.assert_called_once()

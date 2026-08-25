@@ -24,7 +24,7 @@ def create_message(
     data: MessageCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> MessageResponse:
     return message_service.create(
         db,
         chat_uuid,
@@ -40,7 +40,7 @@ def get_messages(
     chat_uuid: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list[MessageResponse]:
     return message_service.get_messages(
         db,
         chat_uuid,

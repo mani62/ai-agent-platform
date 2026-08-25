@@ -22,6 +22,7 @@ class AgentService:
             name=data.name,
             description=data.description,
             system_prompt=data.system_prompt,
+            provider=data.provider,
             model=data.model
         )
 

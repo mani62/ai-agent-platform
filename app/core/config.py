@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
+    OLLAMA_BASE_URL: str
+
     class Config:
         env_file = ".env"
 

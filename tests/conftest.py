@@ -14,6 +14,8 @@ from app.models.user import User
 
 from app.models.agent import Agent
 
+from unittest.mock import patch
+
 TEST_DATABASE_URL = "sqlite://"
 
 test_engine = create_engine(
@@ -155,3 +157,11 @@ def second_user(
     db.refresh(user)
 
     return user
+
+@pytest.fixture
+def mock_llm():
+    with patch(
+        "app.services.message_service.LLMService.generate_response",
+        return_value="This is a mocked AI response.",
+    ) as mock:
+        yield mock

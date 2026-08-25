@@ -36,7 +36,13 @@ class Agent(Base, TimestampMixin, UUIDMixin):
     model: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
-        default="gpt-4.1-mini"
+    )
+
+    provider: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="ollama",
+        server_default="ollama",
     )
 
     is_active: Mapped[bool] = mapped_column(

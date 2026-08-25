@@ -7,11 +7,14 @@ from app.repositories.chat_repository import ChatRepository
 from app.repositories.message_repository import MessageRepository
 from app.schemas.message import MessageCreate
 
+from app.services.llm_service import LLMService
+
 class MessageService:
 
     def __init__(self):
         self.message_repository = MessageRepository()
         self.chat_repository = ChatRepository()
+        self.llm_service = LLMService()
 
     def create(
         self,
@@ -33,15 +36,46 @@ class MessageService:
                 detail="Chat not found",
             )
 
-        message = Message(
+        user_message = Message(
             chat_id=chat.id,
             role="user",
             content=data.content,
         )
 
+        self.message_repository.create(
+            db,
+            user_message,
+        )
+
+        history = self.message_repository.get_all_by_chat(
+            db,
+            chat.id,
+        )
+
+        messages = [
+            {
+                "role": message.role,
+                "content": message.content,
+            }
+            for message in history
+        ]
+
+        assistant_content = self.llm_service.generate_response(
+            provider=chat.agent.provider,
+            model=chat.agent.model,
+            system_prompt=chat.agent.system_prompt,
+            messages=messages,
+        )
+
+        assistant_message = Message(
+            chat_id=chat.id,
+            role="assistant",
+            content=assistant_content,
+        )
+
         return self.message_repository.create(
             db,
-            message,
+            assistant_message,
         )
     
     def get_messages(
