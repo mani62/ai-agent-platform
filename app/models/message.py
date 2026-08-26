@@ -4,6 +4,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.db.mixins import TimestampMixin, UUIDMixin
 
+from sqlalchemy import Enum as SQLEnum
+from app.core.enums import MessageRole
 
 class Message(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "messages"
@@ -20,8 +22,14 @@ class Message(Base, UUIDMixin, TimestampMixin):
         index=True,
     )
 
-    role: Mapped[str] = mapped_column(
-        String(20),
+    role: Mapped[MessageRole] = mapped_column(
+        SQLEnum(
+            MessageRole,
+            name="message_role",
+            values_callable=lambda enum: [
+                item.value for item in enum
+            ],
+        ),
         nullable=False,
     )
 

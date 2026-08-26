@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.enums import MessageRole
 from app.models.message import Message
 from app.models.user import User
 from app.repositories.chat_repository import ChatRepository
@@ -38,7 +39,7 @@ class MessageService:
 
         user_message = Message(
             chat_id=chat.id,
-            role="user",
+            role=MessageRole.USER,
             content=data.content,
         )
 
@@ -54,7 +55,7 @@ class MessageService:
 
         messages = [
             {
-                "role": message.role,
+                "role": message.role.value,
                 "content": message.content,
             }
             for message in history
@@ -69,7 +70,7 @@ class MessageService:
 
         assistant_message = Message(
             chat_id=chat.id,
-            role="assistant",
+            role=MessageRole.ASSISTANT,
             content=assistant_content,
         )
 
