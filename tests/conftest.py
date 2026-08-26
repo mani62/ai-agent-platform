@@ -165,3 +165,11 @@ def mock_llm():
         return_value="This is a mocked AI response.",
     ) as mock:
         yield mock
+
+@pytest.fixture
+def mock_chat_title():
+    with patch(
+        "app.services.message_service.LLMService.generate_chat_title",
+        return_value="FastAPI Dependency Injection",
+    ) as mock:
+        yield mock        

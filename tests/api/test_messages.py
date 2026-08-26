@@ -12,6 +12,7 @@ def test_create_message(
     auth_headers: dict[str, str],
     active_agent: Agent,
     mock_llm,
+    mock_chat_title,
 ) -> None:
 
     chat_response = client.post(
@@ -48,6 +49,7 @@ def test_create_message_persists_in_database(
     active_agent: Agent,
     db: Session,
     mock_llm,
+    mock_chat_title,
 ) -> None:
 
     chat_response = client.post(
@@ -97,6 +99,7 @@ def test_message_belongs_to_correct_chat(
     active_agent: Agent,
     db: Session,
     mock_llm,
+    mock_chat_title,
 ) -> None:
 
     chat_response = client.post(
@@ -141,6 +144,7 @@ def test_create_message_saves_user_and_assistant_messages(
     auth_headers: dict[str, str],
     active_agent: Agent,
     mock_llm,
+    mock_chat_title,
 ) -> None:
 
     chat_response = client.post(
@@ -186,6 +190,7 @@ def test_get_chat_messages(
     auth_headers: dict[str, str],
     active_agent: Agent,
     mock_llm,
+    mock_chat_title,
 ) -> None:
 
     chat_response = client.post(
@@ -456,6 +461,7 @@ def test_llm_is_called_when_message_is_created(
     auth_headers: dict[str, str],
     active_agent: Agent,
     mock_llm,
+    mock_chat_title,
 ) -> None:
 
     chat_response = client.post(
@@ -477,3 +483,144 @@ def test_llm_is_called_when_message_is_created(
     )
 
     mock_llm.assert_called_once()
+
+# Generate Title
+def test_first_message_generates_chat_title(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    active_agent: Agent,
+    mock_llm,
+    mock_chat_title,
+) -> None:
+
+    chat_response = client.post(
+        "/chats",
+        json={
+            "agent_uuid": active_agent.uuid,
+        },
+        headers=auth_headers,
+    )
+
+    assert chat_response.status_code == 201
+
+    chat_uuid = chat_response.json()["uuid"]
+
+    assert chat_response.json()["title"] is None
+
+    message_response = client.post(
+        f"/chats/{chat_uuid}/messages",
+        json={
+            "content": "How does dependency injection work in FastAPI?",
+        },
+        headers=auth_headers,
+    )
+
+    assert message_response.status_code == 201
+
+    response = client.get(
+        f"/chats/{chat_uuid}",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["title"] == "FastAPI Dependency Injection"
+
+    mock_chat_title.assert_called_once()
+
+def test_second_message_does_not_regenerate_chat_title(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    active_agent: Agent,
+    mock_llm,
+    mock_chat_title,
+) -> None:
+
+    chat_response = client.post(
+        "/chats",
+        json={
+            "agent_uuid": active_agent.uuid,
+        },
+        headers=auth_headers,
+    )
+
+    chat_uuid = chat_response.json()["uuid"]
+
+    first_response = client.post(
+        f"/chats/{chat_uuid}/messages",
+        json={
+            "content": "Explain FastAPI dependencies",
+        },
+        headers=auth_headers,
+    )
+
+    assert first_response.status_code == 201
+
+    second_response = client.post(
+        f"/chats/{chat_uuid}/messages",
+        json={
+            "content": "Give me an example",
+        },
+        headers=auth_headers,
+    )
+
+    assert second_response.status_code == 201
+
+    mock_chat_title.assert_called_once()
+
+    response = client.get(
+        f"/chats/{chat_uuid}",
+        headers=auth_headers,
+    )
+
+    assert response.json()["title"] == "FastAPI Dependency Injection"
+
+def test_existing_chat_title_is_not_overwritten(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    active_agent: Agent,
+    mock_llm,
+    mock_chat_title,
+) -> None:
+
+    chat_response = client.post(
+        "/chats",
+        json={
+            "agent_uuid": active_agent.uuid,
+        },
+        headers=auth_headers,
+    )
+
+    chat_uuid = chat_response.json()["uuid"]
+
+    update_response = client.patch(
+        f"/chats/{chat_uuid}",
+        json={
+            "title": "My Python Notes",
+        },
+        headers=auth_headers,
+    )
+
+    assert update_response.status_code == 200
+
+    message_response = client.post(
+        f"/chats/{chat_uuid}/messages",
+        json={
+            "content": "Explain FastAPI",
+        },
+        headers=auth_headers,
+    )
+
+    assert message_response.status_code == 201
+
+    response = client.get(
+        f"/chats/{chat_uuid}",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "My Python Notes"
+
+    mock_chat_title.assert_not_called()                

@@ -73,10 +73,26 @@ class MessageService:
             content=assistant_content,
         )
 
-        return self.message_repository.create(
+        assistant_message = self.message_repository.create(
             db,
             assistant_message,
         )
+
+        if chat.title is None:
+            title = self.llm_service.generate_chat_title(
+                provider=chat.agent.provider,
+                model=chat.agent.model,
+                first_message=data.content,
+            )
+
+            chat.title = title
+
+            self.chat_repository.save(
+                db,
+                chat,
+            )
+
+        return assistant_message
     
     def get_messages(
         self,
