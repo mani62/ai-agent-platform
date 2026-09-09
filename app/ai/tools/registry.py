@@ -21,3 +21,11 @@ class ToolRegistry:
         self,
     ) -> list[BaseTool]:
         return list(self._tools.values())
+    
+    def get_schemas(
+        self,
+    ) -> list[dict]:
+        return [
+            tool.to_schema()
+            for tool in self._tools.values()
+        ]

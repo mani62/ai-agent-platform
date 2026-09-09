@@ -61,3 +61,13 @@ def test_invalid_expression(calculator):
         calculator.execute(
             expression="hello"
         )
+
+def test_calculator_schema(calculator):
+    schema = calculator.to_schema()
+
+    assert schema["type"] == "function"
+    assert schema["function"]["name"] == "calculator"
+    assert schema["function"]["description"] == calculator.description
+    assert schema["function"]["parameters"] == calculator.parameters        
+
+    

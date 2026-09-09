@@ -11,10 +11,11 @@ from app.core.security import hash_password
 from app.db.base import Base
 from app.main import app
 from app.models.user import User
-
 from app.models.agent import Agent
 
 from unittest.mock import patch
+
+from app.llm.types import LLMResponse
 
 TEST_DATABASE_URL = "sqlite://"
 
@@ -172,4 +173,15 @@ def mock_chat_title():
         "app.services.message_service.LLMService.generate_chat_title",
         return_value="FastAPI Dependency Injection",
     ) as mock:
-        yield mock        
+        yield mock     
+
+@pytest.fixture
+def mock_llm():
+    with patch(
+        "app.services.message_service.LLMService.generate_response",
+        return_value=LLMResponse(
+            content="This is a mocked AI response.",
+            tool_calls=[],
+        ),
+    ) as mock:
+        yield mock           

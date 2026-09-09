@@ -9,6 +9,7 @@ class LLMService:
         model: str,
         system_prompt: str,
         messages: list[dict[str, str]],
+        tools: list[dict[str, any]] | None = None,
     ) -> str:
 
         llm_provider = LLMProviderFactory.get_provider(
@@ -19,6 +20,7 @@ class LLMService:
             model=model,
             system_prompt=system_prompt,
             messages=messages,
+            tools=tools,
         )
     
     def generate_chat_title(
@@ -32,7 +34,7 @@ class LLMService:
             provider
         )
 
-        title = llm_provider.generate_response(
+        response  = llm_provider.generate_response(
             model=model,
             system_prompt=CHAT_TITLE_SYSTEM_PROMPT,
             messages=[
@@ -43,4 +45,4 @@ class LLMService:
             ],
         )
 
-        return title.strip()
+        return response.content.strip()
