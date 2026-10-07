@@ -1,9 +1,11 @@
+from uuid import uuid4
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
 from app.models.agent import Agent
 from app.models.user import User
+from app.models.tool import Tool
 
 # Create Agent Scenarios
 def test_create_agent(
@@ -87,7 +89,147 @@ def test_create_agent_persists_in_database(
 
     assert agent.name == payload["name"]
 
-    assert agent.deleted_at is None     
+    assert agent.deleted_at is None 
+
+def test_create_agent_with_tools(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    calculator_tool: Tool,
+) -> None:
+    payload = {
+        "name": "Math Assistant",
+        "description": "Helps with maths",
+        "system_prompt": "You are a maths assistant.",
+        "model": "llama3.2",
+        "tool_uuids": [calculator_tool.uuid],
+    }
+
+    response = client.post(
+        "/agents",
+        json=payload,
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert len(data["tools"]) == 1
+    assert data["tools"][0]["uuid"] == calculator_tool.uuid
+    assert data["tools"][0]["name"] == "calculator"
+
+    agent = (
+        db.query(Agent)
+        .filter(Agent.uuid == data["uuid"])
+        .first()
+    )
+
+    assert agent is not None
+    assert len(agent.tools) == 1
+    assert agent.tools[0].id == calculator_tool.id  
+
+def test_create_agent_with_tools(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    calculator_tool: Tool,
+) -> None:
+    payload = {
+        "name": "Math Assistant",
+        "description": "Helps with maths",
+        "system_prompt": "You are a maths assistant.",
+        "model": "llama3.2",
+        "tool_uuids": [calculator_tool.uuid],
+    }
+
+    response = client.post(
+        "/agents",
+        json=payload,
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert len(data["tools"]) == 1
+    assert data["tools"][0]["uuid"] == calculator_tool.uuid
+    assert data["tools"][0]["name"] == "calculator"
+
+    agent = (
+        db.query(Agent)
+        .filter(Agent.uuid == data["uuid"])
+        .first()
+    )
+
+    assert agent is not None
+    assert len(agent.tools) == 1
+    assert agent.tools[0].id == calculator_tool.id   
+
+def test_create_agent_with_unknown_tool(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+) -> None:
+    payload = {
+        "name": "Math Assistant",
+        "description": "Helps with maths",
+        "system_prompt": "You are a maths assistant.",
+        "model": "llama3.2",
+        "tool_uuids": [str(uuid4())],
+    }
+
+    response = client.post(
+        "/agents",
+        json=payload,
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "One or more tools were not found"
+
+    agent = (
+        db.query(Agent)
+        .filter(Agent.name == "Math Assistant")
+        .first()
+    )
+
+    assert agent is None        
+
+def test_create_agent_with_duplicate_tools(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    calculator_tool: Tool,
+) -> None:
+    payload = {
+        "name": "Math Assistant",
+        "description": "Helps with maths",
+        "system_prompt": "You are a maths assistant.",
+        "model": "llama3.2",
+        "tool_uuids": [
+            calculator_tool.uuid,
+            calculator_tool.uuid,
+        ],
+    }
+
+    response = client.post(
+        "/agents",
+        json=payload,
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Duplicate tools are not allowed"
+
+    agent = (
+        db.query(Agent)
+        .filter(Agent.name == "Math Assistant")
+        .first()
+    )
+
+    assert agent is None
 
 # Get Agent Scenarios
 def test_get_my_agents(
@@ -400,6 +542,146 @@ def test_update_agent_description_to_null(
     data = response.json()
 
     assert data["description"] is None   
+
+def test_update_agent_tools(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    active_agent: Agent,
+    calculator_tool: Tool,
+    second_tool: Tool,
+) -> None:
+    active_agent.tools = [calculator_tool]
+    db.commit()
+
+    payload = {
+        "tool_uuids": [second_tool.uuid],
+    }
+
+    response = client.patch(
+        f"/agents/{active_agent.uuid}",
+        json=payload,
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data["tools"]) == 1
+    assert data["tools"][0]["uuid"] == second_tool.uuid
+    assert data["tools"][0]["name"] == "web_search"
+
+    db.refresh(active_agent)
+
+    assert len(active_agent.tools) == 1
+    assert active_agent.tools[0].id == second_tool.id   
+
+def test_update_agent_with_empty_tools_removes_all_tools(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    active_agent: Agent,
+    calculator_tool: Tool,
+) -> None:
+    active_agent.tools = [calculator_tool]
+    db.commit()
+
+    response = client.patch(
+        f"/agents/{active_agent.uuid}",
+        json={"tool_uuids": []},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["tools"] == []
+
+    db.refresh(active_agent)
+
+    assert active_agent.tools == []     
+
+def test_update_agent_without_tool_uuids_keeps_existing_tools(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    active_agent: Agent,
+    calculator_tool: Tool,
+) -> None:
+    active_agent.tools = [calculator_tool]
+    db.commit()
+
+    response = client.patch(
+        f"/agents/{active_agent.uuid}",
+        json={
+            "name": "Updated Math Assistant",
+        },
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["name"] == "Updated Math Assistant"
+    assert len(data["tools"]) == 1
+    assert data["tools"][0]["uuid"] == calculator_tool.uuid
+
+    db.refresh(active_agent)
+
+    assert len(active_agent.tools) == 1
+    assert active_agent.tools[0].id == calculator_tool.id  
+
+def test_update_agent_with_unknown_tool_keeps_existing_tools(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    active_agent: Agent,
+    calculator_tool: Tool,
+) -> None:
+    active_agent.tools = [calculator_tool]
+    db.commit()
+
+    response = client.patch(
+        f"/agents/{active_agent.uuid}",
+        json={
+            "tool_uuids": [str(uuid4())],
+        },
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "One or more tools were not found"
+
+    db.refresh(active_agent)
+
+    assert len(active_agent.tools) == 1
+    assert active_agent.tools[0].id == calculator_tool.id  
+
+def test_update_agent_with_duplicate_tools(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    db: Session,
+    active_agent: Agent,
+    calculator_tool: Tool,
+) -> None:
+    response = client.patch(
+        f"/agents/{active_agent.uuid}",
+        json={
+            "tool_uuids": [
+                calculator_tool.uuid,
+                calculator_tool.uuid,
+            ],
+        },
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Duplicate tools are not allowed"
+
+
 
 # Soft Delete Agent Scenarios
 def test_soft_delete_agent(

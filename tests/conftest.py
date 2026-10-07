@@ -6,10 +6,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.ai.tools.setup import register_tools
 from app.api.deps import get_db
 from app.core.security import hash_password
 from app.db.base import Base
 from app.main import app
+from app.models.tool import Tool
 from app.models.user import User
 from app.models.agent import Agent
 
@@ -184,4 +186,38 @@ def mock_llm():
             tool_calls=[],
         ),
     ) as mock:
-        yield mock           
+        yield mock    
+
+@pytest.fixture
+def calculator_tool(
+    db: Session,
+) -> Tool:
+    tool = Tool(
+        name="calculator",
+        description="Performs basic mathematical calculations.",
+        is_active=True,
+    )
+
+    db.add(tool)
+    db.commit()
+    db.refresh(tool)
+
+    return tool
+
+@pytest.fixture
+def second_tool(db: Session) -> Tool:
+    tool = Tool(
+        name="web_search",
+        description="Searches the web for information.",
+        is_active=True,
+    )
+
+    db.add(tool)
+    db.commit()
+    db.refresh(tool)
+
+    return tool
+
+@pytest.fixture
+def registered_tools():
+    register_tools()

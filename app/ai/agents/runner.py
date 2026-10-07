@@ -1,5 +1,4 @@
-from app.ai.tools.calculator import CalculatorTool
-from app.ai.tools.registry import ToolRegistry
+from app.ai.tools.registry import tool_registry
 from app.models.agent import Agent
 from app.models.message import Message
 from app.services.llm_service import LLMService
@@ -10,11 +9,7 @@ class AgentRunner:
 
     def __init__(self):
         self.llm_service = LLMService()
-
-        self.tool_registry = ToolRegistry()
-        self.tool_registry.register(
-            CalculatorTool()
-        )
+        self.tool_registry = tool_registry
 
     def run(
         self,
@@ -30,7 +25,16 @@ class AgentRunner:
             for message in history
         ]
 
-        tools = self.tool_registry.get_schemas()
+        allowed_tool_names = {
+            tool.name
+            for tool in agent.tools
+        }
+
+        tools = [
+            tool.to_schema()
+            for tool in self.tool_registry.get_all()
+            if tool.name in allowed_tool_names
+        ]
 
         for _ in range(self.MAX_ITERATIONS):
 
@@ -50,6 +54,7 @@ class AgentRunner:
                 result = self._execute_tool(
                     tool_name=tool_call.name,
                     arguments=tool_call.arguments,
+                    allowed_tool_names=allowed_tool_names,
                 )
 
                 messages.append(
@@ -77,7 +82,11 @@ class AgentRunner:
         self,
         tool_name: str,
         arguments: dict,
+        allowed_tool_names: set[str],
     ) -> str:
+
+        if tool_name not in allowed_tool_names:
+            return f"Error: Tool '{tool_name}' is not allowed for this agent."
 
         tool = self.tool_registry.get(
             tool_name

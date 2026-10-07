@@ -29,3 +29,5 @@ class ToolRegistry:
             tool.to_schema()
             for tool in self._tools.values()
         ]
+    
+tool_registry = ToolRegistry()    

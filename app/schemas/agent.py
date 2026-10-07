@@ -1,6 +1,8 @@
 from typing import Literal
+from uuid import UUID
 from pydantic import BaseModel, Field
 from app.schemas.base import BaseResponse
+from app.schemas.tool import ToolRead
 
 class AgentCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
@@ -8,6 +10,7 @@ class AgentCreate(BaseModel):
     system_prompt: str = Field(min_length=1)
     provider: Literal["ollama", "openai"] = "ollama"
     model: str = Field(min_length=1, max_length=100)
+    tool_uuids: list[UUID] = Field(default_factory=list)
 class AgentUpdate(BaseModel):
     name: str | None = Field(
         default=None,
@@ -34,6 +37,8 @@ class AgentUpdate(BaseModel):
     provider: Literal["ollama", "openai"] | None = None
 
     is_active: bool | None = None
+
+    tool_uuids: list[UUID] | None = None
     
 class AgentRead(BaseResponse):
     uuid: str
@@ -43,4 +48,5 @@ class AgentRead(BaseResponse):
     provider: str
     model: str
     is_active: bool
+    tools: list[ToolRead] = Field(default_factory=list)
     

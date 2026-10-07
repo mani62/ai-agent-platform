@@ -1,8 +1,12 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import String, Boolean, Integer, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.db.mixins import TimestampMixin, UUIDMixin
 
+if TYPE_CHECKING:
+    from app.models.tool import Tool
 class Agent(Base, TimestampMixin, UUIDMixin):
     __tablename__ = "agents"
 
@@ -58,4 +62,9 @@ class Agent(Base, TimestampMixin, UUIDMixin):
     chats = relationship(
         "Chat",
         back_populates="agent",
+    )
+
+    tools: Mapped[list["Tool"]] = relationship(
+        secondary="agent_tools",
+        back_populates="agents",
     )
