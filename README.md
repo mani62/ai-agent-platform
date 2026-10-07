@@ -2,8 +2,6 @@
 
 Backend API for creating personal AI agents, attaching tools, and chatting with them. Each user owns their agents and conversations. A message is answered by the agent bound to that chat, which can call allowed tools before it replies.
 
-This project was designed and developed by me as a hands-on AI engineering project, covering the backend architecture, authentication, agent and chat workflows, LLM provider integration, tool calling, persistence, testing, and containerised development setup.
-
 The service is a [FastAPI](https://fastapi.tiangolo.com/ "https://fastapi.tiangolo.com/") application backed by PostgreSQL. Language models are reached through a provider interface. [Ollama](https://ollama.com/ "https://ollama.com/") is the implemented provider.
 
 ## Features
