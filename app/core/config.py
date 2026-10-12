@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
     OLLAMA_BASE_URL: str
+    TAVILY_API_KEY: str | None = None
 
     class Config:
         env_file = ".env"
